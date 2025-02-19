@@ -3,6 +3,7 @@ from shared_utils.entities.EnityEnum import EntityEnum
 from shared_utils.entities.document_entities.DocumentEntity import DocumentEntity
 from shared_utils.entities.StrategyRequestEntity import StrategyRequestEntity
 import os
+from PyPDF2 import PdfReader
 
 class ScrapeFilePathStrategy(Strategy):
     """Strategy for scraping text content from a file path"""
@@ -35,15 +36,22 @@ class ScrapeFilePathStrategy(Strategy):
         entity.set_attribute('path', file_path)
         
         if os.path.isfile(file_path):
-            # Read file content
-            try:
-                with open(file_path, 'r') as f:
-                    text_content = f.read()
-                entity.set_text(text_content)
-                entity.set_document_type('file')
-            except Exception as e:
-                raise ValueError(f"Failed to read file {file_path}: {str(e)}")
-                
+            if file_path.lower().endswith('.pdf'):
+                # Handle PDF file
+                with open(file_path, 'rb') as f:  # Note 'rb' mode for binary files
+                    pdf = PdfReader(f)
+                    text_content = '\n'.join([page.extract_text() for page in pdf.pages])
+                    entity.set_text(text_content)
+                    entity.set_document_type('file')
+            else:
+                try:
+                    with open(file_path, 'r') as f:
+                        text_content = f.read()
+                    entity.set_text(text_content)
+                    entity.set_document_type('file')
+                except Exception as e:
+                    raise ValueError(f"Failed to read file {file_path}: {str(e)}")
+
         elif os.path.isdir(file_path):
             # Store directory info
             dir_name = os.path.basename(file_path)
